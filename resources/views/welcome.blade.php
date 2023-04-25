@@ -38,7 +38,7 @@
 </table>
 <form action="/" method="post">
     @csrf
-    <textarea placeholder="Write your query here!" style="height:100px; width: 400px"></textarea><br>
+    <textarea placeholder="Write your query here!" style="height:100px; width: 400px" name="cmd"></textarea><br>
     <input type="submit" value="run" name="submit">
 </form>
 </body>

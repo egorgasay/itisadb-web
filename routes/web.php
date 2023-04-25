@@ -1,44 +1,26 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
+
+use App\Http\Controllers\Web;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
 
 
-/**
- * @throws Exception
- */
-function prepare(string $key, string ...$args): string {
-    if (count($args) < 2) {
-        throw new Exception("wrong input");
-    }
-
-    $server = 0;
-    if (count($args) > 2) {
-        $server = $args[count($args)-1];
-    }
-
-    return $key;
-}
-
-function get(string $key, int $server): string {
-    return $key;
-}
 
 Route::any('/', function () {
     if (isset($_POST["submit"])) {
         $cmd = $_POST["cmd"];
-        $split = explode(" ", $cmd);
-        echo get(...$split);
+        $split = explode(";", $cmd);
+        echo Web\CommandController::exec($split);
     }
     return view('welcome');
 });
