@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ServersController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Web;
@@ -17,11 +18,14 @@ use App\Http\Controllers\Web;
 
 
 Route::any('/', function () {
+    $result = [];
     if (isset($_POST["submit"])) {
         $cmd = $_POST["cmd"];
-        $split = explode(";", $cmd);
-        echo Web\CommandController::exec($split);
+        $split = explode(";", rtrim($cmd, ";"));
+        $result = Web\CommandController::exec($split);
     }
-    return view('welcome');
+    $servers = ServersController::get();
+
+    return view('welcome', ['result' => $result, 'servers' => $servers]);
 });
 

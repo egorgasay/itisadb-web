@@ -2,28 +2,31 @@
 
 namespace App\Http\Controllers\Web;
 
-use Api;
-use App\Api\BalancerClient;
-use App\Api\BalancerGetRequest;
-use Grpc;
+use App\Exceptions;
+
 
 class CommandController {
     public static function exec(array $arr): string {
         $out = "";
         foreach ($arr as $value) {
             $split = explode(" ", $value);
-            $out .= CommandController::prepare(...$split)."<br>";
+            try {
+                $out .= CommandController::prepare(...$split).PHP_EOL;
+            } catch (Exceptions\WrongInputException $e){
+                $out .= $e->getMessage();
+                break;
+            }
         }
         return $out;
     }
 
     /**
-     * @throws Exception
+     * @throws Exceptions\WrongInputException
      */
     private static function prepare(string $act, string ...$args): string {
-        if (count($args) < 2) {
-            return implode(" ", $args);
-            // throw new Exception("wrong input");
+        if (count($args) < 1) {
+            error_log("wrong input $act".implode(" ", $args));
+            throw new Exceptions\WrongInputException("wrong input: $act".implode(" ", $args));
         }
         $act = trim($act);
 
@@ -33,7 +36,7 @@ class CommandController {
             array_pop($args);
         }
 
-        $key = array_pop($args);
+        $key = array_shift($args);
         if ($act == "get") {
             return CommandController::get($key, $server);
         } else if ($act == "set")  {
@@ -45,23 +48,47 @@ class CommandController {
     }
 
     private static function get(string $key, int $server): string {
-        // grpc stuff
-        $client = new BalancerClient("127.0.0.1:800", [
-            'credentials' => Grpc\ChannelCredentials::createInsecure(),
-        ]);
-        $request = new BalancerGetRequest();
-        $request -> setKey($key);
-        list($response, $status) = $client->Get($request)->wait();
-        if ($status->code !== Grpc\STATUS_OK) {
-            echo "ERROR: " . $status->code . ", " . $status->details . PHP_EOL;
-            exit(1);
-        }
-        echo implode("", $response)."<br>";
-        return "ok get $key from $server";
+        // http request to localhost:890/get
+
+        //open connection
+        $ch = curl_init();
+
+        $fields = [
+            'key' => $key,
+            'server' => $server,
+        ];
+
+        //set the url, number of POST vars, POST data
+        curl_setopt($ch,CURLOPT_URL, "127.0.0.1:890/get");
+        curl_setopt($ch,CURLOPT_POST, true);
+        curl_setopt($ch,CURLOPT_POSTFIELDS, json_encode($fields));
+
+        //So that curl_exec returns the contents of the cURL; rather than echoing it
+        curl_setopt($ch,CURLOPT_RETURNTRANSFER, true);
+
+        return "$key:".curl_exec($ch);
     }
 
     private static function set(string $key, string $value, int $server): string {
-        // gen-grpc stuff
-        return "ok set $key - $value to $server";
+        // rest stuff
+
+        //open connection
+        $ch = curl_init();
+
+        $fields = [
+            'key' => $key,
+            'value' => $value,
+            'server' => $server,
+        ];
+
+        //set the url, number of POST vars, POST data
+        curl_setopt($ch,CURLOPT_URL, "127.0.0.1:890/set");
+        curl_setopt($ch,CURLOPT_POST, true);
+        curl_setopt($ch,CURLOPT_POSTFIELDS, json_encode($fields));
+
+        //So that curl_exec returns the contents of the cURL; rather than echoing it
+        curl_setopt($ch,CURLOPT_RETURNTRANSFER, true);
+
+        return "$key saved to $server";
     }
 }
